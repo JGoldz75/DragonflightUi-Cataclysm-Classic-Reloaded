@@ -106,7 +106,7 @@ local defaults = {
             targetDebuffsMineFirst = false,
             targetDebuffOffsetX = 0,
             targetDebuffOffsetY = 0,
-            targetDebuffSpacing = 0,
+            targetDebuffSpacing = 1,
             enableNumericThreat = true,
             numericThreatAnchor = 'TOP',
             enableThreatGlow = true,
@@ -2127,8 +2127,9 @@ Module.Frame = frame
 local FADING_BAR_DURATION = 0.45
 local HIT_INDICATOR_DURATION = 0.75
 local HIT_INDICATOR_CRIT_DURATION = 1.45
-local TARGET_DEBUFF_ROW_WIDTH = 122
-local TARGET_DEBUFF_SPACING = 0
+local TARGET_DEBUFF_ROW_WIDTH = 124
+local TARGET_DEBUFF_SPACING = 1
+local TARGET_DEBUFF_VISUAL_PADDING = 1
 local TARGET_DEBUFF_ROW_SPACING = 3
 
 local function DFFadingBar_OnUpdate(self, elapsed)
@@ -2302,6 +2303,7 @@ function Module.UpdateTargetDebuffLayout(targetFrame)
     local offsetX = settings.targetDebuffOffsetX or 0
     local offsetY = settings.targetDebuffOffsetY or 0
     local spacing = settings.targetDebuffSpacing or TARGET_DEBUFF_SPACING
+    local effectiveSpacing = spacing + TARGET_DEBUFF_VISUAL_PADDING
 
     if customSize <= 0 and personalScale == 1 and not mineFirst and offsetX == 0 and offsetY == 0 and
         spacing == TARGET_DEBUFF_SPACING then
@@ -2364,7 +2366,7 @@ function Module.UpdateTargetDebuffLayout(targetFrame)
         button:SetScale(scale)
         button:SetPoint('TOPLEFT', relativeTo, relativePoint, startX + offsetX + rowX, startY + offsetY - rowY)
 
-        rowX = rowX + desiredSize + spacing
+        rowX = rowX + desiredSize + effectiveSpacing
         if desiredSize > rowHeight then rowHeight = desiredSize end
     end
 end
