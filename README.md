@@ -1,10 +1,27 @@
 # DragonflightUI classic
 
-World of Warcraft (classic) Addon to bring the new Retail UI to WoW Classic!
+World of Warcraft (classic) addon to bring the new Retail UI to WoW Classic.
 
-View on Curseforge: https://www.curseforge.com/wow/addons/dragonflight-ui-classic
+## About this release
 
-## Features
+This repository is a community-tweaked release of DragonflightUI for Cataclysm Classic. I did not create the original addon; this release only adds a handful of extra unit-frame features and small quality-of-life adjustments.
+
+The original Dragonflight UI Classic addon is available here:
+https://www.curseforge.com/wow/addons/dragonflight-ui-classic
+
+## Changes in this release
+
+- Added optional Z-Perl-style **Fading Bars** for unit-frame health and power bars, giving damage, healing, and power changes a smoother trailing animation.
+- Added optional **Hit Indicators** on the target portrait, showing party and raid damage numbers over the enemy portrait.
+- Tuned hit indicators so critical hits appear larger and linger longer, while non-critical hits are subtler.
+- Added target debuff sizing controls, including a general debuff size slider.
+- Added a personal debuff scale option so your own debuffs can appear larger than other players' debuffs.
+- Added an option to place your own debuffs first on the target frame.
+- Added target debuff X/Y offset controls so larger debuffs can be moved away from the power bar.
+- Added target debuff spacing control and tighter default debuff layout tuning.
+- Adjusted the target debuff layout to avoid protected-frame movement errors during combat when changing debuff-only settings.
+
+## Original addon features
 
 _Minimalistic - Modern - Modular_\
 No carbon copy of the new retail Dragonflight UI, but a faithful adaption with extra, classic related features.\
@@ -51,7 +68,7 @@ Official supported Game Versions: **Cata Classic** and **Era**.\
 
 ## Support
 
-If you want to support the development, like and share, but if you're feeling extra kind, you can [buy me a slice of pizza.](https://www.buymeacoffee.com/karlheinzschneider "https://www.buymeacoffee.com/karlheinzschneider") . Thanks!
+If this tweaked release helped you, you can [buy me a coffee.](https://buymeacoffee.com/jgoldhirsc5 "https://buymeacoffee.com/jgoldhirsc5") Thanks!
 
 # Preview
 
