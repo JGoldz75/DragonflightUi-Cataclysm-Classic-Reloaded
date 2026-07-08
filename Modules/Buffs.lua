@@ -574,7 +574,7 @@ function Module.AddBuffBorders()
             end
         end
 
-        local maxDebuffs = self.maxDebuffs or MAX_TARGET_DEBUFFS; -- max = 16
+        local maxDebuffs = MAX_TARGET_DEBUFFS; -- max = 16
 
         for i = 1, maxDebuffs do
             frameName = selfName .. "Debuff" .. (i);

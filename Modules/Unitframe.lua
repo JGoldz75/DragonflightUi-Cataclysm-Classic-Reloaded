@@ -106,7 +106,7 @@ local defaults = {
             targetDebuffsMineFirst = false,
             targetDebuffOffsetX = 0,
             targetDebuffOffsetY = 0,
-            targetDebuffSpacing = 1,
+            targetDebuffSpacing = 0,
             enableNumericThreat = true,
             numericThreatAnchor = 'TOP',
             enableThreatGlow = true,
@@ -2128,7 +2128,7 @@ local FADING_BAR_DURATION = 0.45
 local HIT_INDICATOR_DURATION = 0.75
 local HIT_INDICATOR_CRIT_DURATION = 1.45
 local TARGET_DEBUFF_ROW_WIDTH = 124
-local TARGET_DEBUFF_SPACING = 1
+local TARGET_DEBUFF_SPACING = 0
 local TARGET_DEBUFF_VISUAL_PADDING = 1
 local TARGET_DEBUFF_ROW_SPACING = 3
 
@@ -2289,6 +2289,18 @@ local function isPlayerDebuff(button, auraIndex)
     return false
 end
 
+local function getTargetDebuffAnchor(targetFrame, anchorButton)
+    local point, relativeTo, relativePoint, startX, startY = anchorButton:GetPoint(1)
+    if not point or not relativeTo then return 'TOPLEFT', targetFrame, 'BOTTOMLEFT', 5, -5 end
+
+    local relativeName = relativeTo.GetName and relativeTo:GetName()
+    if relativeTo == anchorButton or (relativeName and relativeName:match('^TargetFrameDebuff')) then
+        return 'TOPLEFT', targetFrame, 'BOTTOMLEFT', 5, -5
+    end
+
+    return point, relativeTo, relativePoint, startX or 0, startY or 0
+end
+
 function Module.UpdateTargetDebuffLayout(targetFrame)
     if targetFrame ~= TargetFrame then return end
 
@@ -2296,7 +2308,7 @@ function Module.UpdateTargetDebuffLayout(targetFrame)
     if not settings then return end
 
     local selfName = targetFrame:GetName()
-    local maxDebuffs = targetFrame.maxDebuffs or MAX_TARGET_DEBUFFS
+    local maxDebuffs = MAX_TARGET_DEBUFFS
     local customSize = settings.targetDebuffSize or 0
     local personalScale = settings.targetDebuffPersonalScale or 1
     local mineFirst = settings.targetDebuffsMineFirst
@@ -2341,10 +2353,7 @@ function Module.UpdateTargetDebuffLayout(targetFrame)
         end)
     end
 
-    local point, relativeTo, relativePoint, startX, startY = anchorButton:GetPoint(1)
-    if not point then
-        point, relativeTo, relativePoint, startX, startY = 'TOPLEFT', targetFrame, 'BOTTOMLEFT', 5, -5
-    end
+    local point, relativeTo, relativePoint, startX, startY = getTargetDebuffAnchor(targetFrame, anchorButton)
 
     local rowX, rowY, rowHeight = 0, 0, 0
 
