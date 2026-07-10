@@ -2128,7 +2128,7 @@ local HIT_INDICATOR_DURATION = 0.75
 local HIT_INDICATOR_CRIT_DURATION = 1.45
 local TARGET_DEBUFF_ROW_WIDTH = 124
 local TARGET_DEBUFF_SPACING = 0
-local TARGET_DEBUFF_ANCHOR_X = 5
+local TARGET_DEBUFF_ANCHOR_X = 0
 local TARGET_DEBUFF_ANCHOR_Y = -5
 local TARGET_DEBUFF_CELL_PADDING_X = 5
 local TARGET_DEBUFF_CELL_PADDING_Y = 6
@@ -2298,6 +2298,7 @@ function Module.UpdateTargetDebuffLayout(targetFrame)
     if not settings then return end
 
     local selfName = targetFrame:GetName()
+    local anchorFrame = TargetFrameManaBar or targetFrame.manabar or targetFrame
     local maxDebuffs = MAX_TARGET_DEBUFFS
     local customSize = settings.targetDebuffSize or 0
     local personalScale = settings.targetDebuffPersonalScale or 1
@@ -2367,7 +2368,7 @@ function Module.UpdateTargetDebuffLayout(targetFrame)
         button:ClearAllPoints()
         button:SetScale(1)
         button:SetSize(desiredSize, desiredSize)
-        button:SetPoint('TOPLEFT', targetFrame, 'BOTTOMLEFT', TARGET_DEBUFF_ANCHOR_X + offsetX + rowX,
+        button:SetPoint('TOPLEFT', anchorFrame, 'BOTTOMLEFT', TARGET_DEBUFF_ANCHOR_X + offsetX + rowX,
                         TARGET_DEBUFF_ANCHOR_Y + offsetY - rowY)
 
         rowX = rowX + layoutWidth
