@@ -849,7 +849,6 @@ if true then
             Module.db.profile[key][sub] = value
             if TargetFrame and TargetFrame_UpdateAuras then
                 TargetFrame_UpdateAuras(TargetFrame)
-                Module.UpdateTargetDebuffLayout(TargetFrame)
             end
         else
             setOption(info, value)
@@ -2129,9 +2128,11 @@ local HIT_INDICATOR_DURATION = 0.75
 local HIT_INDICATOR_CRIT_DURATION = 1.45
 local TARGET_DEBUFF_ROW_WIDTH = 124
 local TARGET_DEBUFF_SPACING = 0
-local TARGET_DEBUFF_CELL_PADDING_X = 8
-local TARGET_DEBUFF_CELL_PADDING_Y = 10
-local TARGET_DEBUFF_ROW_SPACING = 4
+local TARGET_DEBUFF_ANCHOR_X = 5
+local TARGET_DEBUFF_ANCHOR_Y = -5
+local TARGET_DEBUFF_CELL_PADDING_X = 5
+local TARGET_DEBUFF_CELL_PADDING_Y = 6
+local TARGET_DEBUFF_ROW_SPACING = 3
 
 local function DFFadingBar_OnUpdate(self, elapsed)
     local bar = self.DFStatusBar
@@ -2290,18 +2291,6 @@ local function isPlayerDebuff(button, auraIndex)
     return false
 end
 
-local function getTargetDebuffAnchor(targetFrame, anchorButton)
-    local point, relativeTo, relativePoint, startX, startY = anchorButton:GetPoint(1)
-    if not point or not relativeTo then return 'TOPLEFT', targetFrame, 'BOTTOMLEFT', 5, -5 end
-
-    local relativeName = relativeTo.GetName and relativeTo:GetName()
-    if relativeTo == anchorButton or (relativeName and relativeName:match('^TargetFrameDebuff')) then
-        return 'TOPLEFT', targetFrame, 'BOTTOMLEFT', 5, -5
-    end
-
-    return point, relativeTo, relativePoint, startX or 0, startY or 0
-end
-
 function Module.UpdateTargetDebuffLayout(targetFrame)
     if targetFrame ~= TargetFrame then return end
 
@@ -2333,6 +2322,7 @@ function Module.UpdateTargetDebuffLayout(targetFrame)
         if button and button:IsShown() then
             if not button.DFOriginalScale then button.DFOriginalScale = button:GetScale() end
             if not button.DFOriginalWidth then button.DFOriginalWidth = button:GetWidth() end
+            if not button.DFBaseScale then button.DFBaseScale = 1 end
 
             table.insert(debuffs, {
                 button = button,
@@ -2344,16 +2334,12 @@ function Module.UpdateTargetDebuffLayout(targetFrame)
 
     if #debuffs == 0 then return end
 
-    local anchorButton = debuffs[1].button
-
     if mineFirst then
         table.sort(debuffs, function(a, b)
             if a.mine ~= b.mine then return a.mine end
             return a.index < b.index
         end)
     end
-
-    local point, relativeTo, relativePoint, startX, startY = getTargetDebuffAnchor(targetFrame, anchorButton)
 
     local rowX, rowY, rowHeight = 0, 0, 0
 
@@ -2363,7 +2349,7 @@ function Module.UpdateTargetDebuffLayout(targetFrame)
         local desiredSize = customSize > 0 and customSize or originalWidth
         if info.mine then desiredSize = desiredSize * personalScale end
 
-        local scale = button.DFOriginalScale * (desiredSize / originalWidth)
+        local scale = button.DFBaseScale * (desiredSize / originalWidth)
         local layoutWidth = desiredSize + spacing + TARGET_DEBUFF_CELL_PADDING_X
         local layoutHeight = desiredSize + TARGET_DEBUFF_CELL_PADDING_Y
 
@@ -2375,7 +2361,8 @@ function Module.UpdateTargetDebuffLayout(targetFrame)
 
         button:ClearAllPoints()
         button:SetScale(scale)
-        button:SetPoint('TOPLEFT', relativeTo, relativePoint, startX + offsetX + rowX, startY + offsetY - rowY)
+        button:SetPoint('TOPLEFT', targetFrame, 'BOTTOMLEFT', TARGET_DEBUFF_ANCHOR_X + offsetX + rowX,
+                        TARGET_DEBUFF_ANCHOR_Y + offsetY - rowY)
 
         rowX = rowX + layoutWidth
         if layoutHeight > rowHeight then rowHeight = layoutHeight end
