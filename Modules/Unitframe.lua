@@ -2285,7 +2285,7 @@ local function isPlayerDebuff(button, auraIndex)
         if buttonSpellID and playerSpellID and buttonSpellID == playerSpellID then return true end
         if spellID and playerSpellID and spellID == playerSpellID then return true end
         if name and icon and name == playerName and icon == playerIcon then return true end
-        if buttonIcon and playerIcon and buttonIcon == playerIcon then return true end
+        if name and buttonIcon and playerIcon and name == playerName and buttonIcon == playerIcon then return true end
     end
 
     return false
@@ -2310,7 +2310,12 @@ function Module.UpdateTargetDebuffLayout(targetFrame)
         spacing == TARGET_DEBUFF_SPACING then
         for i = 1, maxDebuffs do
             local button = _G[selfName .. "Debuff" .. i]
-            if button and button.DFOriginalScale then button:SetScale(button.DFOriginalScale) end
+            if button and button.DFOriginalScale then
+                button:SetScale(button.DFOriginalScale)
+                if button.DFOriginalWidth and button.DFOriginalHeight then
+                    button:SetSize(button.DFOriginalWidth, button.DFOriginalHeight)
+                end
+            end
         end
         return
     end
@@ -2322,7 +2327,7 @@ function Module.UpdateTargetDebuffLayout(targetFrame)
         if button and button:IsShown() then
             if not button.DFOriginalScale then button.DFOriginalScale = button:GetScale() end
             if not button.DFOriginalWidth then button.DFOriginalWidth = button:GetWidth() end
-            if not button.DFBaseScale then button.DFBaseScale = 1 end
+            if not button.DFOriginalHeight then button.DFOriginalHeight = button:GetHeight() end
 
             table.insert(debuffs, {
                 button = button,
@@ -2346,10 +2351,10 @@ function Module.UpdateTargetDebuffLayout(targetFrame)
     for _, info in ipairs(debuffs) do
         local button = info.button
         local originalWidth = button.DFOriginalWidth or button:GetWidth()
-        local desiredSize = customSize > 0 and customSize or originalWidth
+        local originalHeight = button.DFOriginalHeight or button:GetHeight()
+        local desiredSize = customSize > 0 and customSize or math.max(originalWidth, originalHeight)
         if info.mine then desiredSize = desiredSize * personalScale end
 
-        local scale = button.DFBaseScale * (desiredSize / originalWidth)
         local layoutWidth = desiredSize + spacing + TARGET_DEBUFF_CELL_PADDING_X
         local layoutHeight = desiredSize + TARGET_DEBUFF_CELL_PADDING_Y
 
@@ -2360,7 +2365,8 @@ function Module.UpdateTargetDebuffLayout(targetFrame)
         end
 
         button:ClearAllPoints()
-        button:SetScale(scale)
+        button:SetScale(1)
+        button:SetSize(desiredSize, desiredSize)
         button:SetPoint('TOPLEFT', targetFrame, 'BOTTOMLEFT', TARGET_DEBUFF_ANCHOR_X + offsetX + rowX,
                         TARGET_DEBUFF_ANCHOR_Y + offsetY - rowY)
 
