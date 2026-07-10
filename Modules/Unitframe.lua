@@ -2129,8 +2129,9 @@ local HIT_INDICATOR_DURATION = 0.75
 local HIT_INDICATOR_CRIT_DURATION = 1.45
 local TARGET_DEBUFF_ROW_WIDTH = 124
 local TARGET_DEBUFF_SPACING = 0
-local TARGET_DEBUFF_VISUAL_PADDING = 1
-local TARGET_DEBUFF_ROW_SPACING = 3
+local TARGET_DEBUFF_CELL_PADDING_X = 8
+local TARGET_DEBUFF_CELL_PADDING_Y = 10
+local TARGET_DEBUFF_ROW_SPACING = 4
 
 local function DFFadingBar_OnUpdate(self, elapsed)
     local bar = self.DFStatusBar
@@ -2315,7 +2316,6 @@ function Module.UpdateTargetDebuffLayout(targetFrame)
     local offsetX = settings.targetDebuffOffsetX or 0
     local offsetY = settings.targetDebuffOffsetY or 0
     local spacing = settings.targetDebuffSpacing or TARGET_DEBUFF_SPACING
-    local effectiveSpacing = spacing + TARGET_DEBUFF_VISUAL_PADDING
 
     if customSize <= 0 and personalScale == 1 and not mineFirst and offsetX == 0 and offsetY == 0 and
         spacing == TARGET_DEBUFF_SPACING then
@@ -2364,8 +2364,10 @@ function Module.UpdateTargetDebuffLayout(targetFrame)
         if info.mine then desiredSize = desiredSize * personalScale end
 
         local scale = button.DFOriginalScale * (desiredSize / originalWidth)
+        local layoutWidth = desiredSize + spacing + TARGET_DEBUFF_CELL_PADDING_X
+        local layoutHeight = desiredSize + TARGET_DEBUFF_CELL_PADDING_Y
 
-        if rowX > 0 and (rowX + desiredSize) > TARGET_DEBUFF_ROW_WIDTH then
+        if rowX > 0 and (rowX + layoutWidth) > TARGET_DEBUFF_ROW_WIDTH then
             rowX = 0
             rowY = rowY + rowHeight + TARGET_DEBUFF_ROW_SPACING
             rowHeight = 0
@@ -2375,8 +2377,8 @@ function Module.UpdateTargetDebuffLayout(targetFrame)
         button:SetScale(scale)
         button:SetPoint('TOPLEFT', relativeTo, relativePoint, startX + offsetX + rowX, startY + offsetY - rowY)
 
-        rowX = rowX + desiredSize + effectiveSpacing
-        if desiredSize > rowHeight then rowHeight = desiredSize end
+        rowX = rowX + layoutWidth
+        if layoutHeight > rowHeight then rowHeight = layoutHeight end
     end
 end
 
