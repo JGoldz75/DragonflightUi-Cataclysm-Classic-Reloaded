@@ -2299,7 +2299,6 @@ function Module.UpdateTargetDebuffLayout(targetFrame)
 
     local selfName = targetFrame:GetName()
     local anchorFrame = TargetFrameManaBar or targetFrame.manabar or targetFrame
-    local maxDebuffs = MAX_TARGET_DEBUFFS
     local customSize = settings.targetDebuffSize or 0
     local personalScale = settings.targetDebuffPersonalScale or 1
     local mineFirst = settings.targetDebuffsMineFirst
@@ -2307,23 +2306,26 @@ function Module.UpdateTargetDebuffLayout(targetFrame)
     local offsetY = settings.targetDebuffOffsetY or 0
     local spacing = settings.targetDebuffSpacing or TARGET_DEBUFF_SPACING
 
-    if customSize <= 0 and personalScale == 1 and not mineFirst and offsetX == 0 and offsetY == 0 and
-        spacing == TARGET_DEBUFF_SPACING then
-        for i = 1, maxDebuffs do
-            local button = _G[selfName .. "Debuff" .. i]
-            if button and button.DFOriginalScale then
-                button:SetScale(button.DFOriginalScale)
-                if button.DFOriginalWidth and button.DFOriginalHeight then
-                    button:SetSize(button.DFOriginalWidth, button.DFOriginalHeight)
-                end
-            end
-        end
-        return
-    end
-
+    local auras = {}
     local debuffs = {}
 
-    for i = 1, maxDebuffs do
+    for i = 1, MAX_TARGET_BUFFS do
+        local button = _G[selfName .. "Buff" .. i]
+        if button and button:IsShown() then
+            if not button.DFOriginalScale then button.DFOriginalScale = button:GetScale() end
+            if not button.DFOriginalWidth then button.DFOriginalWidth = button:GetWidth() end
+            if not button.DFOriginalHeight then button.DFOriginalHeight = button:GetHeight() end
+
+            table.insert(auras, {
+                button = button,
+                index = i,
+                mine = false,
+                isDebuff = false
+            })
+        end
+    end
+
+    for i = 1, MAX_TARGET_DEBUFFS do
         local button = _G[selfName .. "Debuff" .. i]
         if button and button:IsShown() then
             if not button.DFOriginalScale then button.DFOriginalScale = button:GetScale() end
@@ -2333,12 +2335,11 @@ function Module.UpdateTargetDebuffLayout(targetFrame)
             table.insert(debuffs, {
                 button = button,
                 index = i,
-                mine = isPlayerDebuff(button, i)
+                mine = isPlayerDebuff(button, i),
+                isDebuff = true
             })
         end
     end
-
-    if #debuffs == 0 then return end
 
     if mineFirst then
         table.sort(debuffs, function(a, b)
@@ -2347,14 +2348,20 @@ function Module.UpdateTargetDebuffLayout(targetFrame)
         end)
     end
 
+    for _, info in ipairs(debuffs) do table.insert(auras, info) end
+    if #auras == 0 then return end
+
     local rowX, rowY, rowHeight = 0, 0, 0
 
-    for _, info in ipairs(debuffs) do
+    for _, info in ipairs(auras) do
         local button = info.button
         local originalWidth = button.DFOriginalWidth or button:GetWidth()
         local originalHeight = button.DFOriginalHeight or button:GetHeight()
-        local desiredSize = customSize > 0 and customSize or math.max(originalWidth, originalHeight)
-        if info.mine then desiredSize = desiredSize * personalScale end
+        local desiredSize = math.max(originalWidth, originalHeight)
+        if info.isDebuff then
+            desiredSize = customSize > 0 and customSize or desiredSize
+            if info.mine then desiredSize = desiredSize * personalScale end
+        end
 
         local layoutWidth = desiredSize + spacing + TARGET_DEBUFF_CELL_PADDING_X
         local layoutHeight = desiredSize + TARGET_DEBUFF_CELL_PADDING_Y
