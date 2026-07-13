@@ -2267,10 +2267,19 @@ local function getDebuffInfo(button, auraIndex, filter)
         if buttonID and buttonID ~= 0 then id = buttonID end
     end
 
+    if C_UnitAuras and C_UnitAuras.GetAuraDataByIndex then
+        local auraFilter = filter and 'HARMFUL|PLAYER' or 'HARMFUL'
+        local auraData = C_UnitAuras.GetAuraDataByIndex('target', id, auraFilter)
+        if auraData then
+            return auraData.name, auraData.icon, auraData.sourceUnit, auraData.spellId,
+                   auraData.isFromPlayerOrPlayerPet
+        end
+    end
+
     local name, icon, _, _, _, _, source, _, _, spellID = UnitDebuff('target', id, filter)
     if not filter then source = button.unitCaster or button.sourceUnit or button.caster or source end
 
-    return name, icon, source, spellID
+    return name, icon, source, spellID, false
 end
 
 local function isOwnedByPlayer(source)
@@ -2281,17 +2290,20 @@ local function isOwnedByPlayer(source)
 end
 
 local function isPlayerDebuff(button, auraIndex)
-    local name, icon, source, spellID = getDebuffInfo(button, auraIndex)
-    if isOwnedByPlayer(source) then return true end
+    local name, icon, source, spellID, isFromPlayer = getDebuffInfo(button, auraIndex)
+    if isFromPlayer or button.isPlayerAura or button.isPlayer or isOwnedByPlayer(source) then return true end
 
     local buttonSpellID = button.spellID or button.spellId
     local buttonIcon = getDebuffButtonIcon(button)
 
     for i = 1, MAX_TARGET_DEBUFFS do
-        local playerName, playerIcon, playerSource, playerSpellID = getDebuffInfo(button, i, 'PLAYER')
+        local playerName, playerIcon, playerSource, playerSpellID, filteredIsFromPlayer =
+            getDebuffInfo(button, i, 'PLAYER')
         if not playerName then break end
 
-        if isOwnedByPlayer(playerSource) and name == playerName and icon == playerIcon then return true end
+        if (filteredIsFromPlayer or isOwnedByPlayer(playerSource)) and name == playerName and icon == playerIcon then
+            return true
+        end
         if buttonSpellID and playerSpellID and buttonSpellID == playerSpellID then return true end
         if spellID and playerSpellID and spellID == playerSpellID then return true end
         if name and icon and name == playerName and icon == playerIcon then return true end
@@ -2367,14 +2379,16 @@ function Module.UpdateTargetDebuffLayout(targetFrame)
         local button = info.button
         local originalWidth = button.DFOriginalWidth or button:GetWidth()
         local originalHeight = button.DFOriginalHeight or button:GetHeight()
-        local desiredSize = math.max(originalWidth, originalHeight)
+        local baseSize = math.max(originalWidth, originalHeight)
+        local visualScale = 1
         if info.isDebuff then
-            desiredSize = customSize > 0 and customSize or desiredSize
-            if info.mine then desiredSize = desiredSize * personalScale end
+            baseSize = customSize > 0 and customSize or baseSize
+            if info.mine then visualScale = personalScale end
         end
 
-        local layoutWidth = desiredSize + spacing + TARGET_DEBUFF_CELL_PADDING_X
-        local layoutHeight = desiredSize + TARGET_DEBUFF_CELL_PADDING_Y
+        local visualSize = baseSize * visualScale
+        local layoutWidth = visualSize + spacing + TARGET_DEBUFF_CELL_PADDING_X
+        local layoutHeight = visualSize + TARGET_DEBUFF_CELL_PADDING_Y
 
         if rowX > 0 and (rowX + layoutWidth) > TARGET_DEBUFF_ROW_WIDTH then
             rowX = 0
@@ -2383,8 +2397,8 @@ function Module.UpdateTargetDebuffLayout(targetFrame)
         end
 
         button:ClearAllPoints()
-        button:SetScale(1)
-        button:SetSize(desiredSize, desiredSize)
+        button:SetScale(visualScale)
+        button:SetSize(baseSize, baseSize)
         button:SetPoint('TOPLEFT', anchorFrame, 'BOTTOMLEFT', TARGET_DEBUFF_ANCHOR_X + offsetX + rowX,
                         TARGET_DEBUFF_ANCHOR_Y + offsetY - rowY)
 
