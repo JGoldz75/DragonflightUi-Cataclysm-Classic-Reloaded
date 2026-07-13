@@ -2260,28 +2260,38 @@ local function getDebuffButtonIcon(button)
     if icon and icon.GetTexture then return icon:GetTexture() end
 end
 
-local function getDebuffCaster(button, auraIndex)
-    local id = button:GetID()
-    if not id or id == 0 then id = auraIndex end
+local function getDebuffInfo(button, auraIndex, filter)
+    local id = auraIndex
+    if not filter then
+        local buttonID = button:GetID()
+        if buttonID and buttonID ~= 0 then id = buttonID end
+    end
 
-    return button.unitCaster or button.caster or select(8, UnitDebuff('target', id))
+    local name, icon, _, _, _, _, source, _, _, spellID = UnitDebuff('target', id, filter)
+    if not filter then source = button.unitCaster or button.sourceUnit or button.caster or source end
+
+    return name, icon, source, spellID
+end
+
+local function isOwnedByPlayer(source)
+    if source == 'player' or source == 'vehicle' or source == 'pet' then return true end
+    if not source or not UnitIsUnit then return false end
+
+    return UnitIsUnit(source, 'player') or UnitIsUnit(source, 'vehicle') or UnitIsUnit(source, 'pet')
 end
 
 local function isPlayerDebuff(button, auraIndex)
-    local caster = getDebuffCaster(button, auraIndex)
-    if caster == 'player' or caster == 'vehicle' then return true end
+    local name, icon, source, spellID = getDebuffInfo(button, auraIndex)
+    if isOwnedByPlayer(source) then return true end
 
-    local id = button:GetID()
-    if not id or id == 0 then id = auraIndex end
-
-    local name, _, icon, _, _, _, _, _, _, _, spellID = UnitDebuff('target', id)
     local buttonSpellID = button.spellID or button.spellId
     local buttonIcon = getDebuffButtonIcon(button)
 
     for i = 1, MAX_TARGET_DEBUFFS do
-        local playerName, _, playerIcon, _, _, _, _, _, _, _, playerSpellID = UnitDebuff('target', i, 'PLAYER')
+        local playerName, playerIcon, playerSource, playerSpellID = getDebuffInfo(button, i, 'PLAYER')
         if not playerName then break end
 
+        if isOwnedByPlayer(playerSource) and name == playerName and icon == playerIcon then return true end
         if buttonSpellID and playerSpellID and buttonSpellID == playerSpellID then return true end
         if spellID and playerSpellID and spellID == playerSpellID then return true end
         if name and icon and name == playerName and icon == playerIcon then return true end
