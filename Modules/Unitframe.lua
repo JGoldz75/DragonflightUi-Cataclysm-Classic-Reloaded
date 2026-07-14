@@ -2260,26 +2260,24 @@ local function getDebuffButtonIcon(button)
     if icon and icon.GetTexture then return icon:GetTexture() end
 end
 
-local function getDebuffInfo(button, auraIndex, filter)
+local function getDebuffInfo(button, auraIndex, useAuraIndex)
     local id = auraIndex
-    if not filter then
+    if not useAuraIndex then
         local buttonID = button:GetID()
         if buttonID and buttonID ~= 0 then id = buttonID end
     end
 
     if C_UnitAuras and C_UnitAuras.GetAuraDataByIndex then
-        local auraFilter = filter and 'HARMFUL|PLAYER' or 'HARMFUL'
-        local auraData = C_UnitAuras.GetAuraDataByIndex('target', id, auraFilter)
+        local auraData = C_UnitAuras.GetAuraDataByIndex('target', id, 'HARMFUL')
         if auraData then
-            return auraData.name, auraData.icon, auraData.sourceUnit, auraData.spellId,
-                   auraData.isFromPlayerOrPlayerPet
+            return auraData.name, auraData.icon, auraData.sourceUnit, auraData.spellId
         end
     end
 
-    local name, icon, _, _, _, _, source, _, _, spellID = UnitDebuff('target', id, filter)
-    if not filter then source = button.unitCaster or button.sourceUnit or button.caster or source end
+    local name, icon, _, _, _, _, source, _, _, spellID = UnitDebuff('target', id)
+    if not useAuraIndex then source = source or button.unitCaster or button.sourceUnit or button.caster end
 
-    return name, icon, source, spellID, false
+    return name, icon, source, spellID
 end
 
 local function isOwnedByPlayer(source)
@@ -2290,24 +2288,22 @@ local function isOwnedByPlayer(source)
 end
 
 local function isPlayerDebuff(button, auraIndex)
-    local name, icon, source, spellID, isFromPlayer = getDebuffInfo(button, auraIndex)
-    if isFromPlayer or button.isPlayerAura or button.isPlayer or isOwnedByPlayer(source) then return true end
+    local name, icon, source, spellID = getDebuffInfo(button, auraIndex)
+    if isOwnedByPlayer(source) then return true end
 
     local buttonSpellID = button.spellID or button.spellId
     local buttonIcon = getDebuffButtonIcon(button)
 
     for i = 1, MAX_TARGET_DEBUFFS do
-        local playerName, playerIcon, playerSource, playerSpellID, filteredIsFromPlayer =
-            getDebuffInfo(button, i, 'PLAYER')
+        local playerName, playerIcon, playerSource, playerSpellID = getDebuffInfo(button, i, true)
         if not playerName then break end
 
-        if (filteredIsFromPlayer or isOwnedByPlayer(playerSource)) and name == playerName and icon == playerIcon then
-            return true
+        if isOwnedByPlayer(playerSource) then
+            if buttonSpellID and playerSpellID and buttonSpellID == playerSpellID then return true end
+            if spellID and playerSpellID and spellID == playerSpellID then return true end
+            if name and icon and name == playerName and icon == playerIcon then return true end
+            if name and buttonIcon and playerIcon and name == playerName and buttonIcon == playerIcon then return true end
         end
-        if buttonSpellID and playerSpellID and buttonSpellID == playerSpellID then return true end
-        if spellID and playerSpellID and spellID == playerSpellID then return true end
-        if name and icon and name == playerName and icon == playerIcon then return true end
-        if name and buttonIcon and playerIcon and name == playerName and buttonIcon == playerIcon then return true end
     end
 
     return false
