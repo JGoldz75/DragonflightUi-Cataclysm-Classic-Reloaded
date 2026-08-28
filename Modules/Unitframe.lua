@@ -2126,13 +2126,13 @@ Module.Frame = frame
 local FADING_BAR_DURATION = 0.45
 local HIT_INDICATOR_DURATION = 0.75
 local HIT_INDICATOR_CRIT_DURATION = 1.45
-local TARGET_AURA_DEFAULT_SIZE = 21
+local TARGET_BUFF_DEFAULT_SIZE = 17
+local TARGET_DEBUFF_DEFAULT_SIZE = 21
 local TARGET_DEBUFF_ROW_WIDTH = 95
 local TARGET_DEBUFF_SPACING = 0
 local TARGET_DEBUFF_ANCHOR_X = 0
 local TARGET_DEBUFF_ANCHOR_Y = -5
 local TARGET_DEBUFF_CELL_PADDING_X = 5
-local TARGET_DEBUFF_CELL_PADDING_Y = 6
 local TARGET_DEBUFF_ROW_SPACING = 3
 
 local function DFFadingBar_OnUpdate(self, elapsed)
@@ -2301,13 +2301,13 @@ function Module.UpdateTargetDebuffLayout(targetFrame)
     local offsetY = settings.targetDebuffOffsetY or 0
     local spacing = settings.targetDebuffSpacing or TARGET_DEBUFF_SPACING
 
-    local auras = {}
+    local buffs = {}
     local debuffs = {}
 
     for i = 1, MAX_TARGET_BUFFS do
         local button = _G[selfName .. "Buff" .. i]
         if button and button:IsShown() then
-            table.insert(auras, {
+            table.insert(buffs, {
                 button = button,
                 index = i,
                 mine = false,
@@ -2335,36 +2335,46 @@ function Module.UpdateTargetDebuffLayout(targetFrame)
         end)
     end
 
-    for _, info in ipairs(debuffs) do table.insert(auras, info) end
-    if #auras == 0 then return end
+    if #buffs == 0 and #debuffs == 0 then return end
+
+    local groups = {}
+    if #buffs > 0 then table.insert(groups, buffs) end
+    if #debuffs > 0 then table.insert(groups, debuffs) end
 
     local rowX, rowY, rowHeight = 0, 0, 0
 
-    for _, info in ipairs(auras) do
-        local button = info.button
-        local desiredSize = TARGET_AURA_DEFAULT_SIZE
-        if info.isDebuff then
-            if customSize > 0 then desiredSize = customSize end
-            if info.mine then desiredSize = desiredSize * personalScale end
+    local function startNewRow()
+        if rowX == 0 then return end
+
+        rowX = 0
+        rowY = rowY + rowHeight + TARGET_DEBUFF_ROW_SPACING
+        rowHeight = 0
+    end
+
+    for groupIndex, group in ipairs(groups) do
+        if groupIndex > 1 then startNewRow() end
+
+        for _, info in ipairs(group) do
+            local button = info.button
+            local desiredSize = TARGET_BUFF_DEFAULT_SIZE
+            if info.isDebuff then
+                desiredSize = customSize > 0 and customSize or TARGET_DEBUFF_DEFAULT_SIZE
+                if info.mine then desiredSize = desiredSize * personalScale end
+            end
+
+            local layoutWidth = desiredSize + spacing + TARGET_DEBUFF_CELL_PADDING_X
+
+            if rowX > 0 and (rowX + layoutWidth) > TARGET_DEBUFF_ROW_WIDTH then startNewRow() end
+
+            button:ClearAllPoints()
+            button:SetScale(1)
+            button:SetSize(desiredSize, desiredSize)
+            button:SetPoint('TOPLEFT', anchorFrame, 'BOTTOMLEFT', TARGET_DEBUFF_ANCHOR_X + offsetX + rowX,
+                            TARGET_DEBUFF_ANCHOR_Y + offsetY - rowY)
+
+            rowX = rowX + layoutWidth
+            if desiredSize > rowHeight then rowHeight = desiredSize end
         end
-
-        local layoutWidth = desiredSize + spacing + TARGET_DEBUFF_CELL_PADDING_X
-        local layoutHeight = desiredSize + TARGET_DEBUFF_CELL_PADDING_Y
-
-        if rowX > 0 and (rowX + layoutWidth) > TARGET_DEBUFF_ROW_WIDTH then
-            rowX = 0
-            rowY = rowY + rowHeight + TARGET_DEBUFF_ROW_SPACING
-            rowHeight = 0
-        end
-
-        button:ClearAllPoints()
-        button:SetScale(1)
-        button:SetSize(desiredSize, desiredSize)
-        button:SetPoint('TOPLEFT', anchorFrame, 'BOTTOMLEFT', TARGET_DEBUFF_ANCHOR_X + offsetX + rowX,
-                        TARGET_DEBUFF_ANCHOR_Y + offsetY - rowY)
-
-        rowX = rowX + layoutWidth
-        if layoutHeight > rowHeight then rowHeight = layoutHeight end
     end
 end
 
