@@ -104,6 +104,7 @@ local defaults = {
             targetDebuffSize = 0,
             targetDebuffPersonalScale = 1.0,
             targetDebuffsMineFirst = false,
+            targetDebuffTimersMineOnly = true,
             targetDebuffOffsetX = 0,
             targetDebuffOffsetY = 0,
             targetDebuffSpacing = 0,
@@ -637,6 +638,15 @@ local optionsTarget = {
             new = true,
             editmode = true
         },
+        targetDebuffTimersMineOnly = {
+            type = 'toggle',
+            name = L["TargetFrameDebuffTimersMineOnly"],
+            desc = L["TargetFrameDebuffTimersMineOnlyDesc"] .. getDefaultStr('targetDebuffTimersMineOnly', 'target'),
+            group = 'headerStyling',
+            order = 8.75,
+            new = true,
+            editmode = true
+        },
         targetDebuffSize = {
             type = 'range',
             name = L["TargetFrameDebuffSize"],
@@ -845,7 +855,8 @@ if true then
             end
             TargetFrame_UpdateAuras(TargetFrame)
         elseif sub == 'targetDebuffSize' or sub == 'targetDebuffPersonalScale' or sub == 'targetDebuffsMineFirst' or
-            sub == 'targetDebuffOffsetX' or sub == 'targetDebuffOffsetY' or sub == 'targetDebuffSpacing' then
+            sub == 'targetDebuffTimersMineOnly' or sub == 'targetDebuffOffsetX' or sub == 'targetDebuffOffsetY' or
+            sub == 'targetDebuffSpacing' then
             Module.db.profile[key][sub] = value
             if TargetFrame and TargetFrame_UpdateAuras then
                 TargetFrame_UpdateAuras(TargetFrame)
@@ -2286,6 +2297,22 @@ local function isPlayerDebuff(button, auraIndex)
     return castByPlayer == true
 end
 
+local function setDebuffTimerVisible(button, visible)
+    local buttonName = button:GetName()
+    local cooldown = button.cooldown or button.Cooldown or (buttonName and _G[buttonName .. 'Cooldown'])
+    if not cooldown then return end
+
+    local owner = Module.Frame
+    local omniCC = _G.OmniCC
+    if omniCC and omniCC.Cooldown and omniCC.Cooldown.SetNoCooldownCount then
+        omniCC.Cooldown.SetNoCooldownCount(cooldown, not visible, owner)
+    elseif visible then
+        if cooldown.noCooldownCount == owner then cooldown.noCooldownCount = nil end
+    elseif not cooldown.noCooldownCount then
+        cooldown.noCooldownCount = owner
+    end
+end
+
 function Module.UpdateTargetDebuffLayout(targetFrame)
     if targetFrame ~= TargetFrame then return end
 
@@ -2297,6 +2324,7 @@ function Module.UpdateTargetDebuffLayout(targetFrame)
     local customSize = settings.targetDebuffSize or 0
     local personalScale = settings.targetDebuffPersonalScale or 1
     local mineFirst = settings.targetDebuffsMineFirst
+    local timersMineOnly = settings.targetDebuffTimersMineOnly ~= false
     local offsetX = settings.targetDebuffOffsetX or 0
     local offsetY = settings.targetDebuffOffsetY or 0
     local spacing = settings.targetDebuffSpacing or TARGET_DEBUFF_SPACING
@@ -2319,10 +2347,13 @@ function Module.UpdateTargetDebuffLayout(targetFrame)
     for i = 1, MAX_TARGET_DEBUFFS do
         local button = _G[selfName .. "Debuff" .. i]
         if button and button:IsShown() then
+            local mine = isPlayerDebuff(button, i)
+            setDebuffTimerVisible(button, not timersMineOnly or mine)
+
             table.insert(debuffs, {
                 button = button,
                 index = i,
-                mine = isPlayerDebuff(button, i),
+                mine = mine,
                 isDebuff = true
             })
         end
