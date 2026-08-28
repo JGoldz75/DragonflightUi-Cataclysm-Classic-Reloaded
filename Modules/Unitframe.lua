@@ -2126,6 +2126,7 @@ Module.Frame = frame
 local FADING_BAR_DURATION = 0.45
 local HIT_INDICATOR_DURATION = 0.75
 local HIT_INDICATOR_CRIT_DURATION = 1.45
+local TARGET_AURA_DEFAULT_SIZE = 21
 local TARGET_DEBUFF_ROW_WIDTH = 95
 local TARGET_DEBUFF_SPACING = 0
 local TARGET_DEBUFF_ANCHOR_X = 0
@@ -2254,59 +2255,35 @@ function Module.ResetFadingBarsForUnit(healthBar, powerBar)
     Module.ResetFadingBar(powerBar)
 end
 
-local function getDebuffButtonIcon(button)
-    local buttonName = button:GetName()
-    local icon = button.icon or button.Icon or (buttonName and _G[buttonName .. "Icon"])
-    if icon and icon.GetTexture then return icon:GetTexture() end
-end
-
-local function getDebuffInfo(button, auraIndex, useAuraIndex)
-    local id = auraIndex
-    if not useAuraIndex then
-        local buttonID = button:GetID()
-        if buttonID and buttonID ~= 0 then id = buttonID end
-    end
-
-    if C_UnitAuras and C_UnitAuras.GetAuraDataByIndex then
-        local auraData = C_UnitAuras.GetAuraDataByIndex('target', id, 'HARMFUL')
-        if auraData then
-            return auraData.name, auraData.icon, auraData.sourceUnit, auraData.spellId
-        end
-    end
-
-    local name, icon, _, _, _, _, source, _, _, spellID = UnitDebuff('target', id)
-    if not useAuraIndex then source = source or button.unitCaster or button.sourceUnit or button.caster end
-
-    return name, icon, source, spellID
-end
-
 local function isOwnedByPlayer(source)
     if source == 'player' or source == 'vehicle' or source == 'pet' then return true end
-    if not source or not UnitIsUnit then return false end
+    if not source then return false end
+
+    if UnitIsOwnerOrControllerOfUnit and UnitIsOwnerOrControllerOfUnit('player', source) then return true end
+    if not UnitIsUnit then return false end
 
     return UnitIsUnit(source, 'player') or UnitIsUnit(source, 'vehicle') or UnitIsUnit(source, 'pet')
 end
 
 local function isPlayerDebuff(button, auraIndex)
-    local name, icon, source, spellID = getDebuffInfo(button, auraIndex)
-    if isOwnedByPlayer(source) then return true end
+    local id = button:GetID()
+    if not id or id == 0 then id = auraIndex end
 
-    local buttonSpellID = button.spellID or button.spellId
-    local buttonIcon = getDebuffButtonIcon(button)
+    if C_UnitAuras and C_UnitAuras.GetAuraDataByIndex then
+        local auraData = C_UnitAuras.GetAuraDataByIndex('target', id, 'HARMFUL')
+        if auraData then
+            if isOwnedByPlayer(auraData.sourceUnit) then return true end
+            if auraData.sourceUnit then return false end
 
-    for i = 1, MAX_TARGET_DEBUFFS do
-        local playerName, playerIcon, playerSource, playerSpellID = getDebuffInfo(button, i, true)
-        if not playerName then break end
-
-        if isOwnedByPlayer(playerSource) then
-            if buttonSpellID and playerSpellID and buttonSpellID == playerSpellID then return true end
-            if spellID and playerSpellID and spellID == playerSpellID then return true end
-            if name and icon and name == playerName and icon == playerIcon then return true end
-            if name and buttonIcon and playerIcon and name == playerName and buttonIcon == playerIcon then return true end
+            return auraData.isFromPlayerOrPlayerPet == true
         end
     end
 
-    return false
+    local _, _, _, _, _, _, source, _, _, _, _, _, castByPlayer = UnitDebuff('target', id)
+    if isOwnedByPlayer(source) then return true end
+    if source then return false end
+
+    return castByPlayer == true
 end
 
 function Module.UpdateTargetDebuffLayout(targetFrame)
@@ -2330,10 +2307,6 @@ function Module.UpdateTargetDebuffLayout(targetFrame)
     for i = 1, MAX_TARGET_BUFFS do
         local button = _G[selfName .. "Buff" .. i]
         if button and button:IsShown() then
-            if not button.DFOriginalScale then button.DFOriginalScale = button:GetScale() end
-            if not button.DFOriginalWidth then button.DFOriginalWidth = button:GetWidth() end
-            if not button.DFOriginalHeight then button.DFOriginalHeight = button:GetHeight() end
-
             table.insert(auras, {
                 button = button,
                 index = i,
@@ -2346,10 +2319,6 @@ function Module.UpdateTargetDebuffLayout(targetFrame)
     for i = 1, MAX_TARGET_DEBUFFS do
         local button = _G[selfName .. "Debuff" .. i]
         if button and button:IsShown() then
-            if not button.DFOriginalScale then button.DFOriginalScale = button:GetScale() end
-            if not button.DFOriginalWidth then button.DFOriginalWidth = button:GetWidth() end
-            if not button.DFOriginalHeight then button.DFOriginalHeight = button:GetHeight() end
-
             table.insert(debuffs, {
                 button = button,
                 index = i,
@@ -2373,18 +2342,14 @@ function Module.UpdateTargetDebuffLayout(targetFrame)
 
     for _, info in ipairs(auras) do
         local button = info.button
-        local originalWidth = button.DFOriginalWidth or button:GetWidth()
-        local originalHeight = button.DFOriginalHeight or button:GetHeight()
-        local baseSize = math.max(originalWidth, originalHeight)
-        local visualScale = 1
+        local desiredSize = TARGET_AURA_DEFAULT_SIZE
         if info.isDebuff then
-            baseSize = customSize > 0 and customSize or baseSize
-            if info.mine then visualScale = personalScale end
+            if customSize > 0 then desiredSize = customSize end
+            if info.mine then desiredSize = desiredSize * personalScale end
         end
 
-        local visualSize = baseSize * visualScale
-        local layoutWidth = visualSize + spacing + TARGET_DEBUFF_CELL_PADDING_X
-        local layoutHeight = visualSize + TARGET_DEBUFF_CELL_PADDING_Y
+        local layoutWidth = desiredSize + spacing + TARGET_DEBUFF_CELL_PADDING_X
+        local layoutHeight = desiredSize + TARGET_DEBUFF_CELL_PADDING_Y
 
         if rowX > 0 and (rowX + layoutWidth) > TARGET_DEBUFF_ROW_WIDTH then
             rowX = 0
@@ -2393,8 +2358,8 @@ function Module.UpdateTargetDebuffLayout(targetFrame)
         end
 
         button:ClearAllPoints()
-        button:SetScale(visualScale)
-        button:SetSize(baseSize, baseSize)
+        button:SetScale(1)
+        button:SetSize(desiredSize, desiredSize)
         button:SetPoint('TOPLEFT', anchorFrame, 'BOTTOMLEFT', TARGET_DEBUFF_ANCHOR_X + offsetX + rowX,
                         TARGET_DEBUFF_ANCHOR_Y + offsetY - rowY)
 
